@@ -13,77 +13,81 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Product {
-  id             String         @id @default(uuid())
-  name           String
-  description    String
-  price          String
-  imageUrl       String
-  ingredients    String[]
-  restaurantId   String
-  restaurant     Restaurant     @relation(fields: [restaurantId], references: [id])
-  menuCategoryId String
-  menuCategory   MenuCategory   @relation(fields: [menuCategoryId], references: [id])
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime
-  orderProduct   OrderProduct[]
-}
-
 model Restaurant {
   id             String         @id @default(uuid())
   name           String
-  slug           String
+  slug           String         @unique
   description    String
   avatarImageUrl String
   coverImageUrl  String
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime
   menuCategories MenuCategory[]
-  product        Product[]
-  order          Order[]
+  products       Product[]
+  orders         Order[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 }
 
 model MenuCategory {
   id           String     @id @default(uuid())
-  restaurantId String
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
   name         String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurantId String
+  products     Product[]
   createdAt    DateTime   @default(now())
-  updatedAt    DateTime
-  product      Product[]
+  updatedAt    DateTime   @updatedAt
+}
+
+model Product {
+  id             String         @id @default(uuid())
+  name           String
+  description    String
+  price          Float
+  imageUrl       String
+  ingredients    String[]
+  orderProducts  OrderProduct[]
+  restaurant     Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurantId   String
+  menuCategory   MenuCategory   @relation(fields: [menuCategoryId], references: [id], onDelete: Cascade)
+  menuCategoryId String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Order {
+  id                Int               @id @default(autoincrement())
+  total             Float
+  status            OrderStatus
+  consumptionMethod ConsumptionMethod
+  restaurant        Restaurant        @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurantId      String
+  orderProducts     OrderProduct[]
+  customerName      String
+  customerCpf       String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 }
 
 model OrderProduct {
   id        String   @id @default(uuid())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   Int
   quantity  Int
   price     Float
   createdAt DateTime @default(now())
-  updatedAt DateTime
-  orderId   Int
-  order     Order    @relation(fields: [orderId], references: [id])
-}
-
-model Order {
-  id                Int                    @id @default(autoincrement())
-  total             Float
-  status            OrderStatus
-  consumptionMethod OrderConsumptionMethod
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime
-  orderProduct      OrderProduct[]
-  restaurantId      String
-  restaurant        Restaurant             @relation(fields: [restaurantId], references: [id])
+  updatedAt DateTime @updatedAt
 }
 
 enum OrderStatus {
   PENDING
   IN_PREPARATION
+  PAYMENT_CONFIRMED
+  PAYMENT_FAILED
   FINISHED
 }
 
-enum OrderConsumptionMethod {
-  TAKEWAY
+enum ConsumptionMethod {
+  TAKEAWAY
   DINE_IN
 }
